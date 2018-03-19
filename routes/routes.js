@@ -43,7 +43,7 @@ router.post( '/login', function( req, res, next ) {
 });
 
 // Create new Document
-router.post( '/newDoc' function( req, res, next ) {
+router.post( '/newDoc', function( req, res, next ) {
   if( !req.body.userId ) return res.json({ success: false, error: "Not logged in" });
   User.findById( req.body.userId, function( findUserError, foundUser ){
     if( findUserError ) return res.json({ success: false, error: findUserError });
@@ -51,10 +51,13 @@ router.post( '/newDoc' function( req, res, next ) {
     var newDocument = new Document({});
     newDocument.save( function( saveError, savedDocument ) {
       if( saveError ) return res.json({ success: false, error: saveError });
+      
       res.json({ success: true, documentId: savedDocument._id });
     });
   });
 });
+
+router.post( '/' )
 
 module.exports = router;
 
