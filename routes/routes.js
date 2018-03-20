@@ -60,10 +60,12 @@ router.get( '/user/:userId', ( req, res ) => {
     .then( foundUser => {
         var docIdList = [];
         foundUser.docList.forEach( item => {
-            docIdList.push( Document.findById( item )
-            .populate( "owner", "username" )
-            .populate( "collaboratorList", "username" )
-            .exec() );
+            docIdList.push(
+                Document.findById( item )
+                .populate( "owner", "username" )
+                .populate( "collaboratorList", "username" )
+                .exec()
+            );
         });
         return Promise.all( docIdList );
     })
@@ -101,7 +103,7 @@ router.post( '/doc/new', ( req, res ) => {
         updatedDocList = foundUser.docList.slice();
         return newDocument.save();
     })
-    .catch( documentSaveError => handleError( res, "Document Save Error: " + documentSaveError ) )
+    .catch( documentUpdateError => handleError( res, "Document Save Error: " + documentUpdateError ) )
     .then( savedDocument => {
         // console.log( "savedDocument: " + savedDocument );
         updatedDocList.push( savedDocument._id );
@@ -114,28 +116,15 @@ router.post( '/doc/new', ( req, res ) => {
     });
 });
 
-// Function to check if an Array of Schema ObjectId's has a specific Id
-function idInArray( id, array ) {
+// Helper Function to check if an Array of Schema ObjectId's has a specific Id
+  // Returns the index of the found object
+  // If not found, returns -1
+function arrayIdIndex( id, array ) {
     for( var i = 0; i < array.length; i++ ) {
-        if( array[i] == id ) return true;
+        if( String(array[i]) == String(id) ) return i;
     }
-    return false;
+    return -1;
 }
-
-// Get Document
-  // Takes in a Document's Id as a url parameter
-router.get( '/doc/:docId', ( req, res ) => {
-    if( !req.params.docId ) return handleError( res, "No Document found (Invalid Document Id), cannot open Document" );
-    if( !req.body.userId ) return handleError( res, "No User found (Invalid User Id), cannot open Document" );
-    Document.findById( req.params.docId ).exec()
-    .catch( documentFindError => handleError( res, "Document Find Error: " + documentFindError ) )
-    .then( foundDocument => {
-        if( idInArray( req.body.userId, foundDocument.collaboratorList ) ) {
-            return res.json({ success: false, documentId: req.params.docId, error: "Document Add Error: Document already linked to User" });
-        }
-        return res.json({ success: true, document: foundDocument });
-    });
-});
 
 // Add Existing Document
   // Takes in a Document's Id, Document password, and User's Id
@@ -150,8 +139,8 @@ router.post( '/doc/add', ( req, res ) => {
     User.findById( req.body.userId ).exec()
     .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
-        if( idInArray( req.body.docId, foundUser.docList ) ) {
-            return handleError( res, "User already has access to this Document (DocId already in User's DocList)" );
+        if( arrayIdIndex( req.body.docId, foundUser.docList ) !== -1 ) {
+            return handleError( res, "User already linked to this Document (DocId already in User's DocList)" );
         }
         else {
             currentUser = foundUser;
@@ -175,7 +164,91 @@ router.post( '/doc/add', ( req, res ) => {
     });
 });
 
-// Save Document
+// Delete Document
+  // Takes in a Document's Id to delete from the database
+  // If the User is the Document owner, the Document is removed for all Users
+  // If the User is a collaborator, the Document is Unlinked from that User
+router.post( '/doc/remove/', ( req, res ) => {
+    if( !req.body.docId ) return handleError( res, "No document found (Invalid Document Id), cannot Unlink document" );
+    if( !req.body.userId ) return handleError( res, "No user found (Invalid User Id), cannot Unlink document");
+    var currentUser;
+    User.findById( req.body.userId ).exec()
+    .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
+    .then( foundUser => {
+        currentUser = foundUser;
+        return Document.findById( req.body.docId ).exec();
+    })
+    .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
+    .then( foundDocument => {
+        if( foundDocument.owner == req.body.userId ) {
+            deleteDocument( foundDocument, res );
+        }
+        else {
+            unlinkDocument( currentUser, foundDocument, res );
+        }
+    });
+});
+
+// Helper function to unlink one document from a user
+// Removes the User's Id from the Document's Collaborator List
+  // Takes in the Mongoose Models: User and Document
+  // Returns a JSON response
+function unlinkDocument( user, document, res ) {
+    var docIndex = arrayIdIndex( document._id, user.docList );
+    if( docIndex === -1 ) return handleError( res, "Document Unlink Error: Document not in User's Document List" );
+    user.docList.splice( docIndex, 1 );
+    user.save()
+    .catch( updateUserError => handleError( res, "Update User Error: " + updateUserError ) )
+    .then( updatedUser => {
+        var userIndex = arrayIdIndex( user._id, document.collaboratorList );
+        if( userIndex === -1 ) return handleError( res, "User Unlink Error: User not in Document's Collaborator List" );
+        document.collaboratorList.splice( userIndex, 1 );
+        return document.save();
+    })
+    .catch( documentUpdateError => handleError( res, "Document Update Error: " + documentUpdateError ) )
+    .then( updatedDocument => {
+        res.json({ success: true, action: "unlink" });
+    });
+}
+
+// Helper function to unlink a Document from all Users's document List,
+// Then delete the Document
+  // Takes in a Mongoose Model: Document
+  // Returns a JSON response
+function deleteDocument( document, res ) {
+    User.find( {} ).exec()
+    .catch( userFindError => handleError( res, "User Find All Error: " + userFindError ) )
+    .then( foundUserList => {
+        var udpatedUserPromiseArr = [];
+        for( var i = 0; i < foundUserList.length; i++ ) {
+            var idIndex = arrayIdIndex( document._id, foundUserList[i].docList );
+            if( idIndex !== -1 ) foundUserList[i].docList.splice( idIndex, 1 );
+            udpatedUserPromiseArr.push( foundUserList[i].save() );
+        }
+        return Promise.all( udpatedUserPromiseArr );
+    })
+    .catch( updateUserError => handleError( res, "Update User Error: " + updateUserError ) )
+    .then( updatedUserArr => {
+        return document.remove();
+    })
+    .catch( documentDeleteError => handleError( res, "Document Delete Error: " + documentDeleteError ) )
+    .then( () => {
+        res.json({ success: true, action: "delete" });
+    });
+}
+
+// Open Document to Edit
+  // Takes in a Document's Id as a url parameter
+router.get( '/doc/:docId', ( req, res ) => {
+    if( !req.params.docId ) return handleError( res, "No Document found (Invalid Document Id), cannot open Document" );
+    Document.findById( req.params.docId ).exec()
+    .catch( documentFindError => handleError( res, "Document Find Error: " + documentFindError ) )
+    .then( foundDocument => {
+        return res.json({ success: true, document: foundDocument });
+    });
+});
+
+// Save/Update Document
   // Takes in a Document's Id as a url parameter
   // Takes in the Id of the User that did the edit
   // Takes in the Document content, to save to the database
@@ -191,17 +264,6 @@ router.post( '/doc/:docId', ( req, res ) => {
     Document.findByIdAndUpdate( req.params.docId, documentUpdateObj ).exec()
     .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
     .then( updatedDocument => {
-        res.json({ success: true });
-    });
-});
-
-// Delete Document
-  // Takes in a Document's Id to delete from the database
-router.delete( '/doc/:docId', ( req, res ) => {
-    if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot Delete document" );
-    Document.findByIdAndRemove( req.params.docId ).exec()
-    .catch( deleteDocumentError => handleError( res, "Delete Document Error: " + deleteDocumentError ) )
-    .then( () => {
         res.json({ success: true });
     });
 });

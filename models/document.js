@@ -7,8 +7,8 @@ var ObjectId = mongoose.Schema.Types.ObjectId;
   // Users need a password to access a document
 var Document = new Schema({
     content: {
-        type: Object,
-        default: {}
+        type: Array,
+        default: []
     },
     owner: {
         type: ObjectId,
