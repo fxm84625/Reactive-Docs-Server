@@ -4,7 +4,7 @@
  * Module dependencies.
  */
 
-var app = require('../server.js');
+var app = require('../server/server.js');
 var debug = require('debug')('passport-local-express4:server');
 var http = require('http');
 
