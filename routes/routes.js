@@ -37,7 +37,7 @@ router.post( '/register', ( req, res ) => {
 router.post( '/login', passport.authenticate( 'local' ), ( req, res ) => {
     req.session.save( sessionSaveError => {
         if( sessionSaveError ) return handleError( res, sessionSaveError );
-        res.json({ success: true, userId: req.user.userId });
+        res.json({ success: true, userId: req.user._id });
     });
 });
 
