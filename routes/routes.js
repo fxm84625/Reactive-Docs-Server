@@ -60,14 +60,21 @@ router.get( '/user/:userId', ( req, res ) => {
     .then( foundUser => {
         var docIdList = [];
         foundUser.docList.forEach( item => {
-            docIdList.push( Document.findById( item ).populate( "owner", "username" ).exec() );
+            docIdList.push( Document.findById( item )
+            .populate( "owner", "username" )
+            .populate( "collaboratorList", "username" )
+            .exec() );
         });
         return Promise.all( docIdList );
     })
     .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
     .then( foundDocList => {
-        /** TO-DO Sort docList **/
-        res.json({ success: true, docList: foundDocList });
+        res.json({
+            success: true,
+            docList: foundDocList.sort( ( a, b ) => {
+                return b.lastEditTime - a.lastEditTime;
+            })
+        });
     });
 });
 
