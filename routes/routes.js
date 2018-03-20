@@ -114,6 +114,14 @@ router.post( '/doc/new', ( req, res ) => {
     });
 });
 
+// Function to check if an Array of Schema ObjectId's has a specific Id
+function idInArray( id, array ) {
+    for( var i = 0; i < array.length; i++ ) {
+        if( array[i] == id ) return true;
+    }
+    return false;
+}
+
 // Get Document
   // Takes in a Document's Id as a url parameter
 router.get( '/doc/:docId', ( req, res ) => {
@@ -122,7 +130,7 @@ router.get( '/doc/:docId', ( req, res ) => {
     Document.findById( req.params.docId ).exec()
     .catch( documentFindError => handleError( res, "Document Find Error: " + documentFindError ) )
     .then( foundDocument => {
-        if( foundDocument.collaboratorList.includes( req.body.userId ) ) {
+        if( idInArray( req.body.userId, foundDocument.collaboratorList ) ) {
             return res.json({ success: false, documentId: req.params.docId, error: "Document Add Error: Document already linked to User" });
         }
         return res.json({ success: true, document: foundDocument });
@@ -142,11 +150,13 @@ router.post( '/doc/add', ( req, res ) => {
     User.findById( req.body.userId ).exec()
     .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
-        if( foundUser.docList.includes( req.body.docId ) ) {
+        if( idInArray( req.body.docId, foundUser.docList ) ) {
             return handleError( res, "User already has access to this Document (DocId already in User's DocList)" );
         }
-        currentUser = foundUser;
-        return Document.findById( req.body.docId ).exec();
+        else {
+            currentUser = foundUser;
+            return Document.findById( req.body.docId ).exec();
+        }
     })
     .catch( documentFindError => handleError( res, "Document Find Error: " + documentFindError ) )
     .then( foundDocument => {
@@ -194,6 +204,16 @@ router.delete( '/doc/:docId', ( req, res ) => {
     .then( () => {
         res.json({ success: true });
     });
+});
+
+// Test function
+router.post( '/test', ( req, res ) => {
+    User.findById( req.body.userId ).exec()
+    .then( foundUser => {
+        var docList = foundUser.docList;
+        console.log( docList[0] == "5ab1594ef0073141e0def86e" );
+        res.json({ item: docList[0] })
+    })
 });
 
 module.exports = router;

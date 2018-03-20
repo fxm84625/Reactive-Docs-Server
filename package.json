@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node ./bin/www",
-    "backend-dev": "nodemon server/server.js --exec babel-node --presets es2015,stage-2",
-    "backend-build": "babel server -d server-dist --presets es2015,stage-2",
-    "backend-server": "node server-dist/server.js"
+    "nodemon": "nodemon ./bin/www"
   },
   "repository": {
     "type": "git",
