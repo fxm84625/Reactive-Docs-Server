@@ -1,7 +1,6 @@
 var mongoose = require( 'mongoose' );
 var Schema = mongoose.Schema;
 mongoose.Promise = Promise;
-// var passportLocalMongoose = require( 'passport-local-mongoose' );
 
 if( !process.env.MONGODB_URI ) throw new Error( "process.env.MONGODB_URI is missing" );
 mongoose.connect( process.env.MONGODB_URI );
@@ -21,5 +20,4 @@ var User = new Schema({
     }
 });
 
-// User.plugin( passportLocalMongoose );
 module.exports = mongoose.model( 'users', User );

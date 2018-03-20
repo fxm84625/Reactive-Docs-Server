@@ -15,7 +15,7 @@ function hashPassword( word ) {
     return hash.digest( 'hex' );
 }
 function handleError( res, error ) {
-    return res.json({ success: false, error: error })
+    return res.json({ success: false, error: error });
 }
 
 // Register New User      // Hashes password before saving
@@ -29,7 +29,7 @@ router.post( '/register', ( req, res ) => {
     });
     newUser.save( function( saveError ) {
         if( saveError ) return handleError( res, "Save Error: " + saveError );
-        res.json({ success: true });
+        return res.json({ success: true });
     });
 });
 
@@ -40,17 +40,6 @@ router.post( '/login', passport.authenticate( 'local' ), ( req, res ) => {
         res.json({ success: true, userId: req.user._id });
     });
 });
-// Login method without passports
-/* router.post( '/login', function( req, res ) {
-    if( !req.body.username ) return res.json({ success: false, error: "No username" });
-    if( !req.body.password ) return res.json({ success: false, error: "No password" });
-    User.findOne( { username: req.body.username }, function( findUserError, foundUser ) {
-        if( findUserError ) return res.json({ success: false, error: findUserError });
-        if( !foundUser ) return res.json({ success: false, error: "Incorrect Username" });
-        if( foundUser.password != hashPassword( req.body.password ) ) return res.json({ success: false, error: "Incorrect Password" });
-        res.json({ success: true, userId: foundUser._id, userDocList: foundUser.docList });
-    });
-}); */
 
 // Logout
 router.post( '/logout', ( req, res ) => {
@@ -64,9 +53,9 @@ router.post( '/logout', ( req, res ) => {
 // Get a List of Documents that one User has access to
   // Reads a User's docList, which is a list of Document ObjectId's
   // Sends a response with a list of populated Documents
-router.get( '/user/:userId', ( req, res ) => {
-    if( !req.params.userId ) return handleError( res, "Not Logged in (Unable to find userId), cannot get Document List" );
-    User.findById( req.params.userId ).exec()
+router.get( '/user', ( req, res ) => {
+    if( !req.user._id ) return handleError( res, "Not Logged in (Unable to find userId), cannot get Document List" );
+    User.findById( req.user._id ).exec()
     .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
         var docIdList = [];
@@ -77,25 +66,26 @@ router.get( '/user/:userId', ( req, res ) => {
     })
     .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
     .then( foundDocList => {
+        /** TO-DO Sort **/
         res.json({ success: true, docList: foundDocList });
     });
 });
 
 // Create new Document
-  // Checks if User is logged in
+  // Takes in a User Id, to be the owner of the new Document
   // Creates a new Document object
   // Adds the new Document's Id to the User's DocumentList
   // Updates the User's DocumentList
 router.post( '/doc/new', ( req, res ) => {
-    if( !req.body.userId ) return handleError( res, "Not logged in (Invalid User Id), cannot create new Document" );
-    // if( !req.body.password ) return res.json({ success: false, error: "No document password" });
+    if( !req.user._id ) return handleError( res, "Not logged in (Invalid User Id), cannot create new Document" );
+    if( !req.body.password ) return handleError( res, "No document password given" );
     var updatedDocList;
-    User.findById( req.body.userId ).exec()
+    User.findById( req.user._id ).exec()
     .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
-        // if( !foundUser ) return handleError( res, "Invalid User Id" );
         var newDocument = new Document({
             owner: foundUser._id,
+            password: hashPassword( req.body.password ),
             collaboratorList: [ foundUser._id ],
             title: req.body.title || "untitled",
             createdTime: Date.now(),
@@ -106,11 +96,13 @@ router.post( '/doc/new', ( req, res ) => {
     })
     .catch( documentSaveError => handleError( res, "Document Save Error: " + documentSaveError ) )
     .then( savedDocument => {
+        // console.log( "savedDocument: " + savedDocument );
         updatedDocList.push( savedDocument._id );
-        return User.findByIdAndUpdate( req.body.userId, { docList: updatedDocList } );
+        return User.findByIdAndUpdate( req.user._id, { docList: updatedDocList } ).exec();
     })
     .catch( updateUserError => handleError( res, "Update User Error: " + updateUserError ) )
     .then( updatedUser => {
+        // console.log( "updatedUser: " + updatedUser );
         res.json({ success: true, documentId: updatedUser.docList[ updatedUser.docList.length - 1 ] });
     });
 });
@@ -118,11 +110,39 @@ router.post( '/doc/new', ( req, res ) => {
 // Get Document
   // Takes in a Document's Id as a url parameter
 router.get( '/doc/:docId', ( req, res ) => {
-    if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot open Document" );
+    if( !req.params.docId ) return handleError( res, "No Document found (Invalid Document Id), cannot open Document" );
+    if( !req.user._id ) return handleError( res, "No User found (Invalid User Id), cannot open Document" );
     Document.findById( req.params.docId ).exec()
     .catch( documentFindError => handleError( res, "Document Find Error: " + documentFindError ) )
     .then( foundDocument => {
-        res.json({ success: true, document: foundDocument });
+        if( foundDocument.collaboratorList.includes( req.user._id ) ) {
+            return res.json({ success: false, documentId: req.params.docId, error: "Document Add Error: Document already linked to User" });
+        }
+        return res.json({ success: true, document: foundDocument });
+    });
+});
+
+// Add Existing Document
+  // Takes in a Document's Id, Document password, and User's Id
+  // Adds the Document Id to the User's list of Documents
+  // If the User's list of Documents already has this Document Id, send an error
+  // If the password does not match the Document's password, send an error
+router.post( '/doc/add', ( req, res ) => {
+    if( !req.body.docId ) return handleError( res, "No Document found (Invalid Document Id), cannot add Document" );
+    if( !req.user._id ) return handleError( res, "No User found (Invalid User Id), cannot add Document" );
+    if( !req.body.password ) return handleError( res, "No password Given, cannot add Document" );
+    User.findById( req.user._id ).exec()
+    .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
+    .then( foundUser => {
+        if( foundUser.docList.includes( req.body.docId ) ) {
+            return handleError( res, "User already has access to this Document (DocId already in User's DocList)" );
+        }
+        foundUser.docList.push( req.body.docId );
+        return foundUser.save().exec();
+    })
+    .catch( saveUserError => handleError( res, "User Save Error: " + saveUserError ) )
+    .then( savedUser => {
+        return res.json({ success: true })
     });
 });
 
@@ -132,7 +152,7 @@ router.get( '/doc/:docId', ( req, res ) => {
   // Takes in the Document content, to save to the database
 router.post( '/doc/:docId', ( req, res ) => {
     if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot Save Document" );
-    if( !req.body.userId ) return handleError( res, "No user found (Invalid User Id), cannot Save Document" );
+    if( !req.user._id ) return handleError( res, "No user found (Invalid User Id), cannot Save Document" );
     if( !req.body.content ) return handleError( res, "No document content found, cannot Save Document" );
     var documentUpdateObj = {
         content: req.body.content,
@@ -158,23 +178,3 @@ router.delete( '/doc/:docId', ( req, res ) => {
 });
 
 module.exports = router;
-
-/**
-    class App
-    render() {
-        this.state.page === "login" ? <Login /> : null
-        this.state.page === "register" ? <Register /> : null
-        this.state.page === "main" ? <Main /> : null
-        this.state.page === "document" ? <Document /> : null
-    }
-**
-    /login
-    /register
-    /user/:userId
-    /doc/:docId
-
-    [ doc, doc, doc, doc ]
-    doc: {
-
-    }
-**/

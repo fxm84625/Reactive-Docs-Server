@@ -9,14 +9,14 @@ var ObjectId = mongoose.Schema.Types.ObjectId;
             <span style={ float: right }>
             <span style={ color: green }> H </span>
             <span style={ color: black }> o </span>
-            <span style={ color: blue    }> C </span>
+            <span style={ color: blue  }> C </span>
             </span>
     **/
 // Documents also have Owners ( creators ), a list of collaborators, and a password
 var Document = new Schema({
     content: {
-        type: Array,
-        default: []
+        type: Object,
+        default: {}
     },
     owner: {
         type: ObjectId,
@@ -31,10 +31,9 @@ var Document = new Schema({
         type: String,
         default: "Untitled"
     },
-    /* password: {
-        type: String,
-        required: true
-    }, */
+    password: {
+        type: String
+    },
     createdTime: {
         type: Date
     },
