@@ -66,7 +66,7 @@ router.get( '/user', ( req, res ) => {
     })
     .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
     .then( foundDocList => {
-        /** TO-DO Sort **/
+        /** TO-DO Sort docList **/
         res.json({ success: true, docList: foundDocList });
     });
 });
