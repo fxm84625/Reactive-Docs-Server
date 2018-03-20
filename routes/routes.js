@@ -1,5 +1,5 @@
 /*
-    Back-end server
+    Back-end server routes
     All paths take in JSON objects and return JSON objects
 */
 var crypto = require( 'crypto' );
@@ -28,7 +28,7 @@ router.post( '/register', ( req, res ) => {
         password: hashPassword( req.body.password )
     });
     newUser.save( function( saveError ) {
-        if( saveError ) return handleError( res, saveError );
+        if( saveError ) return handleError( res, "Save Error: " + saveError );
         res.json({ success: true });
     });
 });
@@ -56,11 +56,14 @@ router.post( '/login', passport.authenticate( 'local' ), ( req, res ) => {
 router.post( '/logout', ( req, res ) => {
     req.logout();
     req.session.save( sessionSaveError => {
-        if( sessionSaveError ) return handleError( res, sessionSaveError );
+        if( sessionSaveError ) return handleError( res, "Logout Session Save Error: " + sessionSaveError );
         res.json({ success: true });
     });
 });
 
+// Get a List of Documents that one User has access to
+  // Reads a User's docList, which is a list of Document ObjectId's
+  // Sends a response with a list of populated Documents
 router.get( '/user/:userId', ( req, res ) => {
     if( !req.params.userId ) return handleError( res, "Not Logged in (Unable to find userId), cannot get Document List" );
     User.findById( req.params.userId ).exec()
@@ -84,40 +87,64 @@ router.get( '/user/:userId', ( req, res ) => {
   // Adds the new Document's Id to the User's DocumentList
   // Updates the User's DocumentList
 router.post( '/doc/new', ( req, res ) => {
-    if( !req.body.userId ) return handleError( res, "Not logged in (Unable to find userId), cannot creatre new Document" );
+    if( !req.body.userId ) return handleError( res, "Not logged in (Invalid User Id), cannot create new Document" );
     // if( !req.body.password ) return res.json({ success: false, error: "No document password" });
     var updatedDocList;
     User.findById( req.body.userId ).exec()
-    .catch( findUserError => handleError( res, findUserError ) )
+    .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
         // if( !foundUser ) return handleError( res, "Invalid User Id" );
         var newDocument = new Document({
             owner: foundUser._id,
             collaboratorList: [ foundUser._id ],
-            title: req.body.title,
+            title: req.body.title || "untitled",
             createdTime: Date.now(),
             lastEditTime: Date.now()
         });
         updatedDocList = foundUser.docList.slice();
         return newDocument.save();
     })
-    .catch( documentSaveError => handleError( res, documentSaveError ) )
+    .catch( documentSaveError => handleError( res, "Document Save Error: " + documentSaveError ) )
     .then( savedDocument => {
         updatedDocList.push( savedDocument._id );
         return User.findByIdAndUpdate( req.body.userId, { docList: updatedDocList } );
     })
-    .catch( updateUserError => handleError( res, updateUserError ) )
+    .catch( updateUserError => handleError( res, "Update User Error: " + updateUserError ) )
     .then( updatedUser => {
         res.json({ success: true, documentId: updatedUser.docList[ updatedUser.docList.length - 1 ] });
     });
 });
 
 // Save Document
-router.post( '/doc/:docId', function( req, res ){
-
+  // Takes in a Document's Id as a url parameter
+  // Takes in the Id of the User that did the edit
+  // Takes in the Document content, to save to the database
+router.post( '/doc/:docId', ( req, res ) => {
+    if( !req.params.docId ) handleError( res, "No document found (Invalid Document Id), cannot Save Document" );
+    if( !req.body.userId ) handleError( res, "No user found (Invalid User Id), cannot Save Document" );
+    if( !req.body.content ) handleError( res, "No document content found, cannot Save Document" );
+    var documentUpdateObj = {
+        content: req.body.content,
+        lastEditTime: Date.now()
+    };
+    this.body.title ? documentUpdateObj.title = this.body.title : null;
+    Document.findByIdAndUpdate( req.params.docId, documentUpdateObj ).exec()
+    .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
+    .then( updatedDocument => {
+        res.json({ success: true });
+    });
 });
 
-// router.post( '/' )
+// Delete Document
+  // Takes in a Document's Id to delete from the database
+router.delete( '/doc/:docId', ( req, res ) => {
+    if( !req.params.docId ) handleError( res, "No document found (Invalid Document Id), cannot Delete document" );
+    Document.findByIdAndRemove( req.params.docId ).exec()
+    .catch( deleteDocumentError => handleError( res, "Delete Document Error: " + deleteDocumentError ) )
+    .then( () => {
+        res.json({ success: true });
+    });
+});
 
 module.exports = router;
 
