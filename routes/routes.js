@@ -37,7 +37,7 @@ router.post( '/register', ( req, res ) => {
 router.post( '/login', passport.authenticate( 'local' ), ( req, res ) => {
     req.session.save( sessionSaveError => {
         if( sessionSaveError ) return handleError( res, sessionSaveError );
-        res.json({ success: true, userId: req.user._id });
+        res.json({ success: true, userId: req.body.userId });
     });
 });
 
@@ -53,14 +53,14 @@ router.post( '/logout', ( req, res ) => {
 // Get a List of Documents that one User has access to
   // Reads a User's docList, which is a list of Document ObjectId's
   // Sends a response with a list of populated Documents
-router.get( '/user', ( req, res ) => {
-    if( !req.user._id ) return handleError( res, "Not Logged in (Unable to find userId), cannot get Document List" );
-    User.findById( req.user._id ).exec()
+router.get( '/user/:userId', ( req, res ) => {
+    if( !req.params.userId ) return handleError( res, "Not Logged in (Unable to find userId), cannot get Document List" );
+    User.findById( req.params.userId ).exec()
     .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
         var docIdList = [];
         foundUser.docList.forEach( item => {
-            docIdList.push( Document.findById( item ).populate( "owner" ).exec() );
+            docIdList.push( Document.findById( item ).populate( "owner", "username" ).exec() );
         });
         return Promise.all( docIdList );
     })
@@ -77,10 +77,10 @@ router.get( '/user', ( req, res ) => {
   // Adds the new Document's Id to the User's DocumentList
   // Updates the User's DocumentList
 router.post( '/doc/new', ( req, res ) => {
-    if( !req.user._id ) return handleError( res, "Not logged in (Invalid User Id), cannot create new Document" );
+    if( !req.body.userId ) return handleError( res, "Not logged in (Invalid User Id), cannot create new Document" );
     if( !req.body.password ) return handleError( res, "No document password given" );
     var updatedDocList;
-    User.findById( req.user._id ).exec()
+    User.findById( req.body.userId ).exec()
     .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
         var newDocument = new Document({
@@ -98,7 +98,7 @@ router.post( '/doc/new', ( req, res ) => {
     .then( savedDocument => {
         // console.log( "savedDocument: " + savedDocument );
         updatedDocList.push( savedDocument._id );
-        return User.findByIdAndUpdate( req.user._id, { docList: updatedDocList } ).exec();
+        return User.findByIdAndUpdate( req.body.userId, { docList: updatedDocList } ).exec();
     })
     .catch( updateUserError => handleError( res, "Update User Error: " + updateUserError ) )
     .then( updatedUser => {
@@ -111,11 +111,11 @@ router.post( '/doc/new', ( req, res ) => {
   // Takes in a Document's Id as a url parameter
 router.get( '/doc/:docId', ( req, res ) => {
     if( !req.params.docId ) return handleError( res, "No Document found (Invalid Document Id), cannot open Document" );
-    if( !req.user._id ) return handleError( res, "No User found (Invalid User Id), cannot open Document" );
+    if( !req.body.userId ) return handleError( res, "No User found (Invalid User Id), cannot open Document" );
     Document.findById( req.params.docId ).exec()
     .catch( documentFindError => handleError( res, "Document Find Error: " + documentFindError ) )
     .then( foundDocument => {
-        if( foundDocument.collaboratorList.includes( req.user._id ) ) {
+        if( foundDocument.collaboratorList.includes( req.body.userId ) ) {
             return res.json({ success: false, documentId: req.params.docId, error: "Document Add Error: Document already linked to User" });
         }
         return res.json({ success: true, document: foundDocument });
@@ -129,9 +129,9 @@ router.get( '/doc/:docId', ( req, res ) => {
   // If the password does not match the Document's password, send an error
 router.post( '/doc/add', ( req, res ) => {
     if( !req.body.docId ) return handleError( res, "No Document found (Invalid Document Id), cannot add Document" );
-    if( !req.user._id ) return handleError( res, "No User found (Invalid User Id), cannot add Document" );
+    if( !req.body.userId ) return handleError( res, "No User found (Invalid User Id), cannot add Document" );
     if( !req.body.password ) return handleError( res, "No password Given, cannot add Document" );
-    User.findById( req.user._id ).exec()
+    User.findById( req.body.userId ).exec()
     .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
         if( foundUser.docList.includes( req.body.docId ) ) {
@@ -152,7 +152,7 @@ router.post( '/doc/add', ( req, res ) => {
   // Takes in the Document content, to save to the database
 router.post( '/doc/:docId', ( req, res ) => {
     if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot Save Document" );
-    if( !req.user._id ) return handleError( res, "No user found (Invalid User Id), cannot Save Document" );
+    if( !req.body.userId ) return handleError( res, "No user found (Invalid User Id), cannot Save Document" );
     if( !req.body.content ) return handleError( res, "No document content found, cannot Save Document" );
     var documentUpdateObj = {
         content: req.body.content,

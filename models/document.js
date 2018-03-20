@@ -2,17 +2,9 @@ var mongoose = require( 'mongoose' );
 var Schema = mongoose.Schema;
 var ObjectId = mongoose.Schema.Types.ObjectId;
 
-// The contents of the Document are a 2D Array
-    // Each Outer Array represents one line of the Document,
-    // and each Inner array represents one of the characters of that line.
-    /**
-            <span style={ float: right }>
-            <span style={ color: green }> H </span>
-            <span style={ color: black }> o </span>
-            <span style={ color: blue  }> C </span>
-            </span>
-    **/
-// Documents also have Owners ( creators ), a list of collaborators, and a password
+// The contents of the Document are an EditorState object, from draft.js
+  // Documents also have an Owner, and a list of collaborators    // The owner and list of collaborators are user id references
+  // Users need a password to access a document
 var Document = new Schema({
     content: {
         type: Object,
@@ -24,7 +16,10 @@ var Document = new Schema({
         ref: "users"
     },
     collaboratorList: {
-        type: Array,
+        type: [{
+          type: ObjectId,
+          ref: "users"
+        }],
         default: [],
     },
     title: {
