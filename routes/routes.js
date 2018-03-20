@@ -115,14 +115,25 @@ router.post( '/doc/new', ( req, res ) => {
     });
 });
 
+// Get Document
+  // Takes in a Document's Id as a url parameter
+router.get( '/doc/:docId', ( req, res ) => {
+    if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot open Document" );
+    Document.findById( req.params.docId ).exec()
+    .catch( documentFindError => handleError( res, "Document Find Error: " + documentFindError ) )
+    .then( foundDocument => {
+        res.json({ success: true, document: foundDocument });
+    });
+});
+
 // Save Document
   // Takes in a Document's Id as a url parameter
   // Takes in the Id of the User that did the edit
   // Takes in the Document content, to save to the database
 router.post( '/doc/:docId', ( req, res ) => {
-    if( !req.params.docId ) handleError( res, "No document found (Invalid Document Id), cannot Save Document" );
-    if( !req.body.userId ) handleError( res, "No user found (Invalid User Id), cannot Save Document" );
-    if( !req.body.content ) handleError( res, "No document content found, cannot Save Document" );
+    if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot Save Document" );
+    if( !req.body.userId ) return handleError( res, "No user found (Invalid User Id), cannot Save Document" );
+    if( !req.body.content ) return handleError( res, "No document content found, cannot Save Document" );
     var documentUpdateObj = {
         content: req.body.content,
         lastEditTime: Date.now()
@@ -138,7 +149,7 @@ router.post( '/doc/:docId', ( req, res ) => {
 // Delete Document
   // Takes in a Document's Id to delete from the database
 router.delete( '/doc/:docId', ( req, res ) => {
-    if( !req.params.docId ) handleError( res, "No document found (Invalid Document Id), cannot Delete document" );
+    if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot Delete document" );
     Document.findByIdAndRemove( req.params.docId ).exec()
     .catch( deleteDocumentError => handleError( res, "Delete Document Error: " + deleteDocumentError ) )
     .then( () => {
