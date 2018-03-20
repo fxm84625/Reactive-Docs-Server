@@ -131,18 +131,30 @@ router.post( '/doc/add', ( req, res ) => {
     if( !req.body.docId ) return handleError( res, "No Document found (Invalid Document Id), cannot add Document" );
     if( !req.body.userId ) return handleError( res, "No User found (Invalid User Id), cannot add Document" );
     if( !req.body.password ) return handleError( res, "No password Given, cannot add Document" );
+    var currentUser;
     User.findById( req.body.userId ).exec()
     .catch( findUserError => handleError( res, "Find User Error: " + findUserError ) )
     .then( foundUser => {
         if( foundUser.docList.includes( req.body.docId ) ) {
             return handleError( res, "User already has access to this Document (DocId already in User's DocList)" );
         }
-        foundUser.docList.push( req.body.docId );
-        return foundUser.save().exec();
+        currentUser = foundUser;
+        return Document.findById( req.body.docId ).exec();
     })
-    .catch( saveUserError => handleError( res, "User Save Error: " + saveUserError ) )
-    .then( savedUser => {
-        return res.json({ success: true })
+    .catch( documentFindError => handleError( res, "Document Find Error: " + documentFindError ) )
+    .then( foundDocument => {
+        if( foundDocument.password != hashPassword( req.body.password ) ) return handleError( res, "Incorrect Document password" );
+        foundDocument.collaboratorList.push( req.body.userId );
+        return foundDocument.save();
+    })
+    .catch( documentUpdateErorr => handleError( res, "Document Update Error: " + documentUpdateErorr ) )
+    .then( updatedDocument => {
+        currentUser.docList.push( updatedDocument._id );
+        return currentUser.save();
+    })
+    .catch( updateUserError => handleError( res, "Update User Error: " + updateUserError ) )
+    .then( updatedUser => {
+        return res.json({ success: true });
     });
 });
 
