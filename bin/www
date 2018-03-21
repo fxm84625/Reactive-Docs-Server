@@ -133,7 +133,7 @@ io.on( 'connection', function( socket ) {
             // If there is no more people in the room, remove the latest Document from that room.
             io.of( hash256( docId ) ).clients( ( clientFindError, clientArray ) => {
                 if( clientFindError ) return console.log( "Error finding Clients from a Room", clientFindError );
-                if( clientArray.length === 0 ) delete documentList[ hash256( data.docId ) ];
+                if( clientArray.length === 0 ) delete documentList[ hash256( docId ) ];
             });
         });
     });
