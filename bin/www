@@ -4,6 +4,7 @@
  * Module dependencies.
  */
 
+var crypto = require( 'crypto' );
 var app = require('../server/server.js');
 var http = require('http');
 
@@ -29,9 +30,6 @@ var io = require( 'socket.io' )( server );
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
-
-var socketListeners = require( '../server/sockets.js' );
-io.on( 'connection', socketListeners );
 
 /**
  * Normalize a port into a number, string, or false.
@@ -92,3 +90,53 @@ function onListening() {
     : 'port ' + addr.port;
   console.log( 'Listening on ' + bind + '\n' )
 }
+
+
+// Hash function
+function hash256( word ) {
+    var hash = crypto.createHash( 'sha256' );
+    hash.update( word + 'amazingDisplayOfSkill,withTheGreatestOfEase' );
+    return hash.digest( 'hex' );
+}
+
+// Variable to store the most recent EditorState of each Document
+  // The keys of these objects will be the Document Model mongoDb Object Id
+  // The value will be a JSON string of an EditorState's "rawContent"
+var documentList = {};
+
+/** Socket Io events **/
+io.on( 'connection', function( socket ) {
+    // When a User opens a Document, the User joins a room associated with that Document's Id
+      // data: { userId, docId }
+    socket.on( 'openDoc', data => {
+        socket.join( hash256( data.docId ), () => {
+            if( documentList[ hash256( data.docId ) ] ) {
+                socket.emit( 'updateDoc', documentList[ hash256( data.docId ) ] );
+            }
+            else {
+                socket.emit( 'fetchDoc' );
+            }
+        });
+    });
+    // After a User opens a Document, the User will send back content for the Server to save
+      // data: { docId, content }
+    socket.on( 'fetchDocResult', data => {
+        documentList[ hash256( data.docId ) ] = content;
+    });
+    // When a User closes the Document, the User leaves the Document's room
+    socket.on( 'closeDoc', docId => {
+        socket.leave( hash256( docId ), () => {
+            // If there is no more people in the room, remove the latest Document from that room.
+            io.of( hash256( docId ) ).clients( ( clientFindError, clientArray ) => {
+                if( clientFindError ) return console.log( "Error finding Clients from a Room", clientFindError );
+                if( clientArray.length === 0 ) documentList[ hash256( data.docId ) ] = null;
+            });
+        });
+    });
+    // When a User edits the Document, all other Users in that Document's room should see the update
+      // data: { userId, docId, content }
+    socket.on( 'editDoc', ( data ) => {
+        documentList[ hash256( data.docId ) ] = data.content;
+        socket.broadcast.to( hash256( data.docId ) ).emit( 'updateDoc', data.content );
+    });
+});
