@@ -134,7 +134,7 @@ io.on( 'connection', function( socket ) {
         });
     });
     // When a User edits the Document, all other Users in that Document's room should see the update
-      // data: { userId, docId, content }
+      // data: { userId, docId, content } 
     socket.on( 'editDoc', ( data ) => {
         documentList[ hash256( data.docId ) ] = data.content;
         var responseData = {
