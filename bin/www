@@ -114,14 +114,14 @@ io.on( 'connection', function( socket ) {
                 socket.emit( 'updateDoc', documentList[ hash256( data.docId ) ] );
             }
             else {
-                socket.emit( 'fetchDoc' );
+                socket.exmit( 'fetchDoc' );
             }
         });
     });
     // After a User opens a Document, the User will send back content for the Server to save
       // data: { docId, content }
     socket.on( 'fetchDocResult', data => {
-        documentList[ hash256( data.docId ) ] = content;
+        documentList[ hash256( data.docId ) ] = data.content;
     });
     // When a User closes the Document, the User leaves the Document's room
     socket.on( 'closeDoc', docId => {
