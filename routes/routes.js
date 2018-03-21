@@ -41,14 +41,14 @@ router.post( '/login', passport.authenticate( 'local' ), ( req, res ) => {
     });
 });
 
-// Logout
-router.post( '/logout', ( req, res ) => {
+// Logout ( Unused, Electron communicates poorly with session and cookies )
+/* router.post( '/logout', ( req, res ) => {
     req.logout();
     req.session.save( sessionSaveError => {
         if( sessionSaveError ) return handleError( res, "Logout Session Save Error: " + sessionSaveError );
         res.json({ success: true });
     });
-});
+}); */
 
 // Get a List of Documents that one User has access to
   // Reads a User's docList, which is a list of Document ObjectId's
@@ -260,7 +260,7 @@ router.post( '/doc/:docId', ( req, res ) => {
         content: req.body.content,
         lastEditTime: Date.now()
     };
-    this.body.title ? documentUpdateObj.title = this.body.title : null;
+    if( req.body.title) documentUpdateObj.title = req.body.title
     Document.findByIdAndUpdate( req.params.docId, documentUpdateObj ).exec()
     .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
     .then( updatedDocument => {
