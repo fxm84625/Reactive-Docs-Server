@@ -137,6 +137,10 @@ io.on( 'connection', function( socket ) {
       // data: { userId, docId, content }
     socket.on( 'editDoc', ( data ) => {
         documentList[ hash256( data.docId ) ] = data.content;
-        socket.broadcast.to( hash256( data.docId ) ).emit( 'updateDoc', data.content );
+        var responseData = {
+            userId: data.userId,
+            content: data.content
+        }
+        io.sockets.in( hash256( data.docId ) ).emit( 'updateDoc', responseData );
     });
 });
