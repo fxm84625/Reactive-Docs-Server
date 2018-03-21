@@ -114,7 +114,7 @@ io.on( 'connection', function( socket ) {
                 socket.emit( 'updateDoc', documentList[ hash256( data.docId ) ] );
             }
             else {
-                socket.exmit( 'fetchDoc' );
+                socket.emit( 'fetchDoc' );
             }
         });
     });
