@@ -35,6 +35,10 @@ var Document = new Schema({
     lastEditTime: {
         type: Date
     }
-});
+},
+    {
+        minimize: false
+    }
+);
 
 module.exports = mongoose.model( 'documents', Document );
