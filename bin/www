@@ -165,7 +165,7 @@ io.on( 'connection', function( socket ) {
     // The selectionState for that User's color is also cleared
       // data: { docId, userColor }
     socket.on( 'closeDoc', function( data ) {
-        var dataId  hash256( data.docId );
+        var dataId = hash256( data.docId );
         socket.leave( dataId );
         if( documentList[ dataId ] ) delete documentList[ dataId ].selectionObj[ data.userColor ];
     });
