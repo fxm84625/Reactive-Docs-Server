@@ -111,25 +111,16 @@ io.on( 'connection', function( socket ) {
     // When a User opens a Document, the User joins a room associated with that Document's Id
       // data: { userId, docId }
     socket.on( 'openDoc', function( data, callback ) {
+        var responseData = {
+            token: hash256( data.userId );
+        };
         if( documentList[ hash256( data.docId ) ] ) {
-            var responseData = {
-                content: documentList[ hash256( data.docId ) ],
-                token: hash256( data.userId )
-            }
-            callback( responseData );
+            responseData.content = documentList[ hash256( data.docId ) ];
         }
         else {
-            fetch( 'https://reactive-docs.herokuapp.com/' + data.docId )
-            .then( res => res.json() )
-            .then( res => {
-                if( !res.success ) return console.log( "Unable to Get Document", res.error );
-                var responseData = {
-                    content: res.document.content,
-                    token: hash256( data.userId )
-                }
-                callback( responseData );
-            });
+            responseData.content: "fetch";
         }
+        callback( responseData );
         socket.join( hash256( data.docId ) );
     });
     
