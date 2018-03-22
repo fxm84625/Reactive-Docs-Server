@@ -112,13 +112,13 @@ io.on( 'connection', function( socket ) {
       // data: { userId, docId }
     socket.on( 'openDoc', function( data, callback ) {
         var responseData = {
-            token: hash256( data.userId );
+            token: hash256( data.userId )
         };
         if( documentList[ hash256( data.docId ) ] ) {
             responseData.content = documentList[ hash256( data.docId ) ];
         }
         else {
-            responseData.content: "fetch";
+            responseData.content = "fetch";
         }
         callback( responseData );
         socket.join( hash256( data.docId ) );
@@ -131,7 +131,7 @@ io.on( 'connection', function( socket ) {
         responseData = {
             content: data.content,
             token: data.token
-        }
+        };
         io.sockets.in( hash256( data.docId ) ).emit( 'updateDoc', responseData )
     });
 });
