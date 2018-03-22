@@ -106,7 +106,7 @@ function hash256( word ) {
       docId: {
         content: editorState rawContent,
         selectionObj: {
-          color(rgb): selectionState (rawData?)
+          color(rgb): selectionState
         }
       }
     }
@@ -128,7 +128,6 @@ io.on( 'connection', function( socket ) {
     socket.on( 'openDoc', function( data, callback ) {
         var dataId = hash256( data.docId );
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
-            console.log( clientArray.length );
             if( clientArray.length >= 5 ) return callback( { error: "Document room is full." } );
             var selectedColor = userColorArray[ clientArray.length ];
             var responseData = {
@@ -147,13 +146,13 @@ io.on( 'connection', function( socket ) {
     });
     
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
-      // data: { content, token, docId, userColor, selection }
+      // data: { content, token, docId, userColor, selectionObj }
     socket.on( 'editDoc', function( data ) {
         var dataId = hash256( data.docId );
         if( !documentList[ dataId ] ) documentList[ dataId ] = {};
         documentList[ dataId ].content = data.content;
         if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].selectionObj = {};
-        documentList[ dataId ].selectionObj[ data.userColor ] = data.selection;
+        documentList[ dataId ].selectionObj = data.selectionObj;
         responseData = {
             content: data.content,
             selectionObj: documentList[ dataId ].selectionObj,
