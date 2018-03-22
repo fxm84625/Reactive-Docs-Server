@@ -135,8 +135,8 @@ io.on( 'connection', function( socket ) {
                 color: selectedColor
             };
             if( documentList[ dataId ] ) {
-                responseData.content = documentList[ dataId ].content;
-                responseData.selectionObj = documentList[ dataId ].selectionObj;
+                responseData.content = documentList[ dataId ].content || {};
+                responseData.selectionObj = documentList[ dataId ].selectionObj || {};
             }
             else { responseData.content = "fetch"; }
             // responseData: { token, content, color, selectionObj }
@@ -165,8 +165,9 @@ io.on( 'connection', function( socket ) {
     // The selectionState for that User's color is also cleared
       // data: { docId, userColor }
     socket.on( 'closeDoc', function( data ) {
-        delete documentList[ hash256( data.docId ) ].selectionObj[ data.userColor ];
-        socket.leave( hash256( data.docId ) );
+        var dataId  hash256( data.docId );
+        socket.leave( dataId );
+        if( documentList[ dataId ] ) delete documentList[ dataId ].selectionObj[ data.userColor ];
     });
 });
 
