@@ -99,37 +99,72 @@ function hash256( word ) {
     return hash.digest( 'hex' );
 }
 
-// Variable to store the most recent EditorState of each Document
-  // The keys of these objects will be the Document Model mongoDb Object Id
-  // The value will be a JSON string of an EditorState's "rawContent"
+// Object to store the most recent EditorState of each Document
+  // The keys are hashed Document Id's
+  /**
+    documentList: {
+      docId: {
+        content: editorState rawContent,
+        selectionObj: {
+          color(rgb): selectionState (rawData?)
+        }
+      }
+    }
+  */
 var documentList = {};
+// Array of User Cursor and Highlight colors
+var userColorArray = [
+    "#99ffcc",  // blue
+    "#ff9933",  // orange
+    "#cc99ff",  // purple
+    "#99ff66",  // green
+    "#ff9999",  // pink
+];
 
 /** Socket Io events **/
 io.on( 'connection', function( socket ) {
     // When a User opens a Document, the User joins a room associated with that Document's Id
       // data: { userId, docId }
     socket.on( 'openDoc', function( data, callback ) {
-        var responseData = {
-            token: data.userId
-        };
-        if( documentList[ hash256( data.docId ) ] ) {
-            responseData.content = documentList[ hash256( data.docId ) ];
-        }
-        else {
-            responseData.content = "fetch";
-        }
-        callback( responseData );
-        socket.join( hash256( data.docId ) );
+        io.in( hash256( data.docId ) ).clients( ( clientFindError, clientArray ) => {
+            if( clientArray.length >= 5 ) return callback( { error: "Document room is full." } );
+            var selectedColor = userColorArray[ clientArray.length ];
+            var responseData = {
+                token: data.userId,
+                color: selectedColor
+            };
+            if( documentList[ hash256( data.docId ) ] ) {
+                responseData.content = documentList[ hash256( data.docId ) ].content;
+                responseData.selectionObj = documentList[ hash256( data.docId ) ].selectionObj;
+            }
+            else { responseData.content = "fetch"; }
+            // responseData: { token, content, color, selectionObj }
+            callback( responseData );
+            socket.join( hash256( data.docId ) );
+        });
     });
     
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
-      // data: { content, token, docId }
+      // data: { content, token, docId, userColor, selection }
     socket.on( 'editDoc', function( data ) {
-        documentList[ hash256( data.docId ) ] = data.content;
+        documentList[ hash256( data.docId ) ].content = data.content;
+        documentList[ hash256( data.docId ) ].selectionObj[ data.userColor ] = data.selection;
         responseData = {
             content: data.content,
             token: data.token
         };
         socket.to( hash256( data.docId ) ).emit( 'updateDoc', responseData )
     });
+    
+    // When a user closes a Document, the User leaves that Document's room
+    // The selectionState for that User's color is also cleared
+      // data: { docId, userColor }
+    socket.on( 'closeDoc', function( data ) => {
+        delete documentList[ hash256( data.docId ) ].selectionObj[ data.userColor ];
+        socket.leave( hash256( data.docId ) );
+    });
 });
+
+/**
+    Drive By
+**/
