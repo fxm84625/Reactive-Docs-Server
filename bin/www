@@ -102,7 +102,7 @@ function hash256( word ) {
 // Variable to store the most recent EditorState of each Document
   // The keys of these objects will be the Document Model mongoDb Object Id
   // The value will be a JSON string of an EditorState's "rawContent"
-var currentState = {};
+var documentList = {};
 // Variable for the current User
 var token;
 
@@ -110,29 +110,37 @@ var token;
 io.on( 'connection', function( socket ) {
     // When a User opens a Document, the User joins a room associated with that Document's Id
       // data: { userId, docId }
-    socket.on( 'join-document', function ( data, callback ) {
-        var { docId, userId } = data;
-        secretToken = hash256( userId );
-        callback({ secretToken, docId, state: currentState[ docId ] })
-        socket.join( hash256( docId ) )
+    socket.on( 'openDoc', function( data, callback ) {
+        if( documentList[ hash256( data.docId ) ] ) {
+            var responseData = {
+                content: documentList[ hash256( data.docId ) ],
+                token: hash256( data.userId )
+            }
+            callback( responseData );
+        }
+        else {
+            fetch( 'https://reactive-docs.herokuapp.com/' + data.docId )
+            .then( res => res.json() )
+            .then( res => {
+                if( !res.success ) return console.log( "Unable to Get Document", res.error );
+                var responseData = {
+                    content: res.document.content,
+                    token: hash256( data.userId )
+                }
+                callback( responseData );
+            });
+        }
+        socket.join( hash256( data.docId ) );
     });
     
-    // When a User closes the Document, the User leaves the Document's room
-    /* socket.on( 'closeDoc', docId => {
-        socket.leave( hash256( docId ), () => {
-            // If there is no more people in the room, remove the latest Document from that room.
-            io.of( hash256( docId ) ).clients( ( clientFindError, clientArray ) => {
-                if( clientFindError ) return console.log( "Error finding Clients from a Room", clientFindError );
-                if( clientArray.length === 0 ) delete documentList[ hash256( docId ) ];
-            });
-        });
-    }); */
-    
-    // When a User edits the Document, all other Users in that Document's room should see the update
-      // data: { userId, docId, content }
-    socket.on('document-save', function (message) {
-        const { userToken, state, docId } = message;
-        currentState[ docId ] = state;
-        io.sockets.in( hash256( docId ) ).emit( 'document-update', { state, docId, userToken });
+    // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
+      // data: { content, token }
+    socket.on( 'editDoc', function( data ) {
+        documentList[ hash256( data.docId ) ] = data.content;
+        responseData = {
+            content: data.content,
+            token: data.token
+        }
+        io.sockets.in( hash256( data.docId ) ).emit( 'updateDoc', responseData )
     });
 });
