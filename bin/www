@@ -148,6 +148,7 @@ io.on( 'connection', function( socket ) {
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
       // data: { content, token, docId, userColor, selection }
     socket.on( 'editDoc', function( data ) {
+        console.log( data.selection );
         var dataId = hash256( data.docId );
         if( !documentList[ dataId ] ) documentList[ dataId ] = {};
         documentList[ dataId ].content = data.content;
