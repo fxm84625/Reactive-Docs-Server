@@ -151,6 +151,7 @@ io.on( 'connection', function( socket ) {
         var dataId = hash256( data.docId );
         if( !documentList[ dataId ] ) documentList[ dataId ] = {};
         documentList[ dataId ].content = data.content;
+        if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].selectionObj = {};
         documentList[ dataId ].selectionObj[ data.userColor ] = data.selection;
         responseData = {
             content: data.content,
