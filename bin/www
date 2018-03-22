@@ -159,7 +159,7 @@ io.on( 'connection', function( socket ) {
     // When a user closes a Document, the User leaves that Document's room
     // The selectionState for that User's color is also cleared
       // data: { docId, userColor }
-    socket.on( 'closeDoc', function( data ) => {
+    socket.on( 'closeDoc', function( data ) {
         delete documentList[ hash256( data.docId ) ].selectionObj[ data.userColor ];
         socket.leave( hash256( data.docId ) );
     });
