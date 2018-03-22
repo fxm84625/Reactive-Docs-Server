@@ -113,7 +113,7 @@ io.on( 'connection', function( socket ) {
     socket.on( 'openDoc', data => {
         socket.join( hash256( data.docId ), () => {
             if( documentList[ hash256( data.docId ) ] ) {
-                socket.emit( 'updateDoc', documentList[ hash256( data.docId ) ] );
+                socket.emit( 'readDoc', documentList[ hash256( data.docId ) ] );
             }
             else {
                 socket.emit( 'fetchDoc' );
