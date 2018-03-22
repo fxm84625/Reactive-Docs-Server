@@ -143,6 +143,6 @@ io.on( 'connection', function( socket ) {
             userId: data.userId,
             content: data.content
         }
-        sockets.to( hash256( data.docId ) ).emit( 'updateDoc', responseData );
+        socket.to( hash256( data.docId ) ).emit( 'updateDoc', responseData );
     });
 });
