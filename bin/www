@@ -137,30 +137,35 @@ io.on( 'connection', function( socket ) {
             if( documentList[ dataId ] ) {
                 responseData.content = documentList[ dataId ].content || {};
                 responseData.selectionObj = documentList[ dataId ].selectionObj || {};
+                responseData.prevSelectionObj = documentList[ dataId ].prevSelectionObj || {};
             }
             else { responseData.content = "fetch"; }
-            // responseData: { token, content, color, selectionObj }
+            // responseData: { token, content, color, selectionObj, prevSelectionObj }
+              // selectionObj and prevSelectionObj are each User's current and previous selectionStates
             callback( responseData );
             socket.join( dataId );
         });
     });
-    
+
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
-      // data: { content, token, docId, userColor, selectionObj }
+      // data: { content, token, docId, userColor, selectionObj, prevSelectionObj }
     socket.on( 'editDoc', function( data ) {
         var dataId = hash256( data.docId );
         if( !documentList[ dataId ] ) documentList[ dataId ] = {};
         documentList[ dataId ].content = data.content;
         if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].selectionObj = {};
         documentList[ dataId ].selectionObj = data.selectionObj;
+        if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].prevSelectionObj = {};
+        documentList[ dataId ].selectionObj = data.prevSelectionObj;
         responseData = {
             content: data.content,
             selectionObj: documentList[ dataId ].selectionObj,
+            prevSelectionObj: documentList[ dataId ].prevSelectionObj,
             token: data.token
         };
         socket.to( dataId ).emit( 'updateDoc', responseData )
     });
-    
+
     // When a user closes a Document, the User leaves that Document's room
     // The selectionState for that User's color is also cleared
       // data: { docId, userColor }
