@@ -103,8 +103,6 @@ function hash256( word ) {
   // The keys of these objects will be the Document Model mongoDb Object Id
   // The value will be a JSON string of an EditorState's "rawContent"
 var documentList = {};
-// Variable for the current User
-var token;
 
 /** Socket Io events **/
 io.on( 'connection', function( socket ) {
@@ -112,7 +110,7 @@ io.on( 'connection', function( socket ) {
       // data: { userId, docId }
     socket.on( 'openDoc', function( data, callback ) {
         var responseData = {
-            token: hash256( data.userId )
+            token: data.userId
         };
         if( documentList[ hash256( data.docId ) ] ) {
             responseData.content = documentList[ hash256( data.docId ) ];
@@ -125,13 +123,13 @@ io.on( 'connection', function( socket ) {
     });
     
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
-      // data: { content, token }
+      // data: { content, token, docId }
     socket.on( 'editDoc', function( data ) {
         documentList[ hash256( data.docId ) ] = data.content;
         responseData = {
             content: data.content,
             token: data.token
         };
-        io.sockets.in( hash256( data.docId ) ).emit( 'updateDoc', responseData )
+        socket.to( hash256( data.docId ) ).emit( 'updateDoc', responseData )
     });
 });
