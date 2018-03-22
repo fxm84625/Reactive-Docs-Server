@@ -128,6 +128,7 @@ io.on( 'connection', function( socket ) {
     socket.on( 'openDoc', function( data, callback ) {
         var dataId = hash256( data.docId );
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
+            console.log( clientArray.length );
             if( clientArray.length >= 5 ) return callback( { error: "Document room is full." } );
             var selectedColor = userColorArray[ clientArray.length ];
             var responseData = {
@@ -148,7 +149,6 @@ io.on( 'connection', function( socket ) {
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
       // data: { content, token, docId, userColor, selection }
     socket.on( 'editDoc', function( data ) {
-        console.log( data.selection );
         var dataId = hash256( data.docId );
         if( !documentList[ dataId ] ) documentList[ dataId ] = {};
         documentList[ dataId ].content = data.content;
