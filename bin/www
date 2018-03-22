@@ -126,34 +126,38 @@ io.on( 'connection', function( socket ) {
     // When a User opens a Document, the User joins a room associated with that Document's Id
       // data: { userId, docId }
     socket.on( 'openDoc', function( data, callback ) {
-        io.in( hash256( data.docId ) ).clients( ( clientFindError, clientArray ) => {
+        var dataId = hash256( data.docId );
+        io.in( dataId ).clients( ( clientFindError, clientArray ) => {
             if( clientArray.length >= 5 ) return callback( { error: "Document room is full." } );
             var selectedColor = userColorArray[ clientArray.length ];
             var responseData = {
                 token: data.userId,
                 color: selectedColor
             };
-            if( documentList[ hash256( data.docId ) ] ) {
-                responseData.content = documentList[ hash256( data.docId ) ].content;
-                responseData.selectionObj = documentList[ hash256( data.docId ) ].selectionObj;
+            if( documentList[ dataId ] ) {
+                responseData.content = documentList[ dataId ].content;
+                responseData.selectionObj = documentList[ dataId ].selectionObj;
             }
             else { responseData.content = "fetch"; }
             // responseData: { token, content, color, selectionObj }
             callback( responseData );
-            socket.join( hash256( data.docId ) );
+            socket.join( dataId );
         });
     });
     
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
       // data: { content, token, docId, userColor, selection }
     socket.on( 'editDoc', function( data ) {
-        documentList[ hash256( data.docId ) ].content = data.content;
-        documentList[ hash256( data.docId ) ].selectionObj[ data.userColor ] = data.selection;
+        var dataId = hash256( data.docId );
+        if( !documentList[ dataId ] ) documentList[ dataId ] = {};
+        documentList[ dataId ].content = data.content;
+        documentList[ dataId ].selectionObj[ data.userColor ] = data.selection;
         responseData = {
             content: data.content,
+            selectionObj: documentList[ dataId ].selectionObj,
             token: data.token
         };
-        socket.to( hash256( data.docId ) ).emit( 'updateDoc', responseData )
+        socket.to( dataId ).emit( 'updateDoc', responseData )
     });
     
     // When a user closes a Document, the User leaves that Document's room
