@@ -182,6 +182,18 @@ io.on( 'connection', function( socket ) {
             }
         });
     });
+    
+    // When a user Edits a Document's title, the server's saved Document title is updateDoc
+      // data: { docId, title }
+    socket.on( 'editTitle', function( data ) {
+        var dataId = hash256( data.docId );
+        if( !documentList[ dataId ] ) documentList[ dataId ] = {};
+        documentList[ dataId ].title = data.title;
+        responseData = {
+            title: data.title
+        };
+        socket.to( dataId ).emit( 'updateTitle', responseData );
+    });
 });
 
 /**
