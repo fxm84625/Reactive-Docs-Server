@@ -11,7 +11,8 @@ var Document = new Schema({
         {
             editorState: EditorState rawContent
             saveTime: Date
-            username: string
+            username: String
+            title: String
         }
     ]
     */

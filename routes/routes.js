@@ -262,10 +262,13 @@ router.post( '/doc/:docId', ( req, res ) => {
         var documentUpdateObj = {
             editorState: req.body.content,
             lastSaveTime: Date.now(),
-            username: req.body.username
+            username: req.body.username,
+        }
+        if( req.body.title ) {
+            documentUpdateObj.title = req.body.title;
+            foundDocument.title = req.body.title;
         }
         foundDocument.content.push( documentUpdateObj );
-        if( req.body.title ) foundDocument.title = req.body.title;
         return foundDocument.save();
     })
     .catch( saveDocumentError => handleError( res, "Save Document Error: " + saveDocumentError ) )
