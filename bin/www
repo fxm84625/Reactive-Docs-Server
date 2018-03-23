@@ -107,9 +107,6 @@ function hash256( word ) {
         content: editorState rawContent,
         selectionObj: {
           color(rgb): selectionState
-        },
-        prevSelectionObj: {
-          color(rgb): prevSelectionState
         }
       }
     }
@@ -141,31 +138,27 @@ io.on( 'connection', function( socket ) {
             if( documentList[ dataId ] ) {
                 responseData.content = documentList[ dataId ].content || {};
                 responseData.selectionObj = documentList[ dataId ].selectionObj || {};
-                responseData.prevSelectionObj = documentList[ dataId ].prevSelectionObj || {};
             }
             else { responseData.content = "fetch"; }
-            // responseData: { token, content, color, selectionObj, prevSelectionObj }
-              // selectionObj and prevSelectionObj are each User's current and previous selectionStates
+            // responseData: { token, content, color, selectionObj }
+              // selectionObj is each User's current selectionStates
             callback( responseData );
             socket.join( dataId );
         });
     });
 
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
-      // data: { content, token, docId, userColor, selectionObj, prevSelectionObj }
+      // data: { content, token, docId, userColor, selectionObj }
     socket.on( 'editDoc', function( data ) {
         var dataId = hash256( data.docId );
         if( !documentList[ dataId ] ) documentList[ dataId ] = {};
         documentList[ dataId ].content = data.content;
         if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].selectionObj = {};
         documentList[ dataId ].selectionObj = data.selectionObj;
-        if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].prevSelectionObj = {};
-        documentList[ dataId ].selectionObj = data.prevSelectionObj;
         responseData = {
             content: data.content,
             token: data.token,
-            selectionObj: documentList[ dataId ].selectionObj,
-            prevSelectionObj: documentList[ dataId ].prevSelectionObj,
+            selectionObj: documentList[ dataId ].selectionObj
         };
         socket.to( dataId ).emit( 'updateDoc', responseData )
     });
@@ -178,9 +171,6 @@ io.on( 'connection', function( socket ) {
         socket.leave( dataId );
         if( documentList[ dataId ] && documentList[ dataId ].selectionObj && documentList[ dataId ].selectionObj[ data.userColor ] ) {
           delete documentList[ dataId ].selectionObj[ data.userColor ];
-        }
-        if( documentList[ dataId ] && documentList[ dataId ].prevSelectionObj && documentList[ dataId ].prevSelectionObj[ data.userColor ] ) {
-          delete documentList[ dataId ].prevSelectionObj[ data.userColor ];
         }
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
             if( clientFindError ) return console.log( "Client Find Error:", clientFindError );
