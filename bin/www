@@ -105,10 +105,10 @@ function hash256( word ) {
     documentList: {
       docId: {
         content: editorState rawContent,
-        selectionObj: {                   // Unused
+        selectionObj: {
           color(rgb): selectionState
         },
-        prevSelectionObj: {               // Unused
+        prevSelectionObj: {
           color(rgb): prevSelectionState
         }
       }
@@ -140,8 +140,8 @@ io.on( 'connection', function( socket ) {
             };
             if( documentList[ dataId ] ) {
                 responseData.content = documentList[ dataId ].content || {};
-                // responseData.selectionObj = documentList[ dataId ].selectionObj || {};
-                // responseData.prevSelectionObj = documentList[ dataId ].prevSelectionObj || {};
+                responseData.selectionObj = documentList[ dataId ].selectionObj || {};
+                responseData.prevSelectionObj = documentList[ dataId ].prevSelectionObj || {};
             }
             else { responseData.content = "fetch"; }
             // responseData: { token, content, color, selectionObj, prevSelectionObj }
@@ -157,15 +157,15 @@ io.on( 'connection', function( socket ) {
         var dataId = hash256( data.docId );
         if( !documentList[ dataId ] ) documentList[ dataId ] = {};
         documentList[ dataId ].content = data.content;
-        // if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].selectionObj = {};
-        // documentList[ dataId ].selectionObj = data.selectionObj;
-        // if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].prevSelectionObj = {};
-        // documentList[ dataId ].selectionObj = data.prevSelectionObj;
+        if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].selectionObj = {};
+        documentList[ dataId ].selectionObj = data.selectionObj;
+        if( !documentList[ dataId ].selectionObj ) documentList[ dataId ].prevSelectionObj = {};
+        documentList[ dataId ].selectionObj = data.prevSelectionObj;
         responseData = {
             content: data.content,
             token: data.token,
-            // selectionObj: documentList[ dataId ].selectionObj,
-            // prevSelectionObj: documentList[ dataId ].prevSelectionObj,
+            selectionObj: documentList[ dataId ].selectionObj,
+            prevSelectionObj: documentList[ dataId ].prevSelectionObj,
         };
         socket.to( dataId ).emit( 'updateDoc', responseData )
     });
@@ -176,7 +176,10 @@ io.on( 'connection', function( socket ) {
     socket.on( 'closeDoc', function( data ) {
         var dataId = hash256( data.docId );
         socket.leave( dataId );
-        // if( documentList[ dataId ] ) delete documentList[ dataId ].selectionObj[ data.userColor ];
+        if( documentList[ dataId ] ) {
+          delete documentList[ dataId ].selectionObj[ data.userColor ];
+          delete documentList[ dataId ].prevSelectionObj[ data.userColor ];
+        }
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
             if( clientFindError ) return console.log( "Client Find Error:", clientFindError );
             if( clientArray.length === 0 ) {

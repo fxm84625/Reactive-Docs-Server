@@ -278,14 +278,4 @@ router.post( '/doc/:docId', ( req, res ) => {
     });
 });
 
-// Test function
-router.post( '/test', ( req, res ) => {
-    User.findById( req.body.userId ).exec()
-    .then( foundUser => {
-        var docList = foundUser.docList;
-        console.log( docList[0] == "5ab1594ef0073141e0def86e" );
-        res.json({ item: docList[0] })
-    })
-});
-
 module.exports = router;
