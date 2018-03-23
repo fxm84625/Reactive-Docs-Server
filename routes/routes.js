@@ -254,16 +254,22 @@ router.get( '/doc/:docId', ( req, res ) => {
   // Takes in the Document content, to save to the database
 router.post( '/doc/:docId', ( req, res ) => {
     if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot Save Document" );
-    if( !req.body.userId ) return handleError( res, "No user found (Invalid User Id), cannot Save Document" );
+    if( !req.body.username ) return handleError( res, "No user found (Invalid Username), cannot Save Document" );
     if( !req.body.content ) return handleError( res, "No document content found, cannot Save Document" );
-    var documentUpdateObj = {
-        content: req.body.content,
-        lastEditTime: Date.now()
-    };
-    if( req.body.title) documentUpdateObj.title = req.body.title
-    Document.findByIdAndUpdate( req.params.docId, documentUpdateObj ).exec()
+    Document.findById( req.params.docId ).exec()
     .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
-    .then( updatedDocument => {
+    .then( foundDocument => {
+        var documentUpdateObj = {
+            editorState: req.body.content,
+            lastSaveTime: Date.now(),
+            username: req.body.username
+        }
+        foundDocument.content.push( documentUpdateObj );
+        if( req.body.title ) foundDocument.title = req.body.title;
+        return foundDocument.save();
+    })
+    .catch( saveDocumentError => handleError( res, "Save Document Error: " + saveDocumentError ) )
+    .then( savedDocument => {
         res.json({ success: true });
     });
 });

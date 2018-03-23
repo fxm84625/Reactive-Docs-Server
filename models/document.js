@@ -6,6 +6,15 @@ var ObjectId = mongoose.Schema.Types.ObjectId;
   // Documents also have an Owner, and a list of collaborators    // The owner and list of collaborators are user id references
   // Users need a password to access a document
 var Document = new Schema({
+    /**
+    content: [
+        {
+            editorState: EditorState rawContent
+            saveTime: Date
+            username: string
+        }
+    ]
+    */
     content: {
         type: Array,
         default: []
