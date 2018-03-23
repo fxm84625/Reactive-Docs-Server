@@ -107,6 +107,9 @@ function hash256( word ) {
         content: editorState rawContent,
         selectionObj: {
           color(rgb): selectionState
+        },
+        prevSelectionObj: {
+          color(rgb): prevSelectionState
         }
       }
     }
@@ -128,6 +131,7 @@ io.on( 'connection', function( socket ) {
     socket.on( 'openDoc', function( data, callback ) {
         var dataId = hash256( data.docId );
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
+            if( clientFindError ) return console.log( "Client Find Error:", clientFindError );
             if( clientArray.length >= 5 ) return callback( { error: "Document room is full." } );
             var selectedColor = userColorArray[ clientArray.length ];
             var responseData = {
@@ -173,6 +177,12 @@ io.on( 'connection', function( socket ) {
         var dataId = hash256( data.docId );
         socket.leave( dataId );
         if( documentList[ dataId ] ) delete documentList[ dataId ].selectionObj[ data.userColor ];
+        io.in( dataId ).clients( ( clientFindError, clientArray ) => {
+            if( clientFindError ) return console.log( "Client Find Error:", clientFindError );
+            if( clientArray.length === 0 ) {
+                delete documentList[ dataId ];
+            }
+        });
     });
 });
 
