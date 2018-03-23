@@ -179,7 +179,7 @@ io.on( 'connection', function( socket ) {
         if( documentList[ dataId ] && documentList[ dataId ].selectionObj && documentList[ dataId ].selectionObj[ data.userColor ] ) {
           delete documentList[ dataId ].selectionObj[ data.userColor ];
         }
-        if( documentList[ dataId ] && documentList[ dataId ].prevSelectionObj && documentList[ dataId ].prevSelectionObj[ data.userColor ] ) {}
+        if( documentList[ dataId ] && documentList[ dataId ].prevSelectionObj && documentList[ dataId ].prevSelectionObj[ data.userColor ] ) {
           delete documentList[ dataId ].prevSelectionObj[ data.userColor ];
         }
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
