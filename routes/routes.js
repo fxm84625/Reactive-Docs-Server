@@ -261,8 +261,9 @@ router.post( '/doc/:docId', ( req, res ) => {
     .then( foundDocument => {
         var documentUpdateObj = {
             editorState: req.body.content,
-            lastSaveTime: Date.now(),
+            saveTime: Date.now(),
             username: req.body.username,
+            title: foundDocument.title
         }
         if( req.body.title ) {
             documentUpdateObj.title = req.body.title;
