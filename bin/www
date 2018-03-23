@@ -104,6 +104,7 @@ function hash256( word ) {
   /**
     documentList: {
       docId: {
+        title: String,
         content: editorState rawContent,
         selectionObj: {
           color(rgb): selectionState
@@ -124,7 +125,7 @@ var userColorArray = [
 /** Socket Io events **/
 io.on( 'connection', function( socket ) {
     // When a User opens a Document, the User joins a room associated with that Document's Id
-      // data: { userId, docId }
+      // data: { userId, docId, title }
     socket.on( 'openDoc', function( data, callback ) {
         var dataId = hash256( data.docId );
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
@@ -133,14 +134,15 @@ io.on( 'connection', function( socket ) {
             var selectedColor = userColorArray[ clientArray.length ];
             var responseData = {
                 token: data.userId,
-                color: selectedColor
+                color: selectedColor,
+                title: data.title
             };
             if( documentList[ dataId ] ) {
                 responseData.content = documentList[ dataId ].content || {};
                 responseData.selectionObj = documentList[ dataId ].selectionObj || {};
             }
             else { responseData.content = "fetch"; }
-            // responseData: { token, content, color, selectionObj }
+            // responseData: { token, content, title, color, selectionObj }
               // selectionObj is each User's current selectionStates
             callback( responseData );
             socket.join( dataId );
@@ -148,7 +150,7 @@ io.on( 'connection', function( socket ) {
     });
 
     // When a user edits a Document, the User broadcasts an event to all other Users in that Document's room
-      // data: { content, token, docId, userColor, selectionObj }
+      // data: { content, token, docId, title, userColor, selectionObj }
     socket.on( 'editDoc', function( data ) {
         var dataId = hash256( data.docId );
         if( !documentList[ dataId ] ) documentList[ dataId ] = {};
@@ -158,6 +160,7 @@ io.on( 'connection', function( socket ) {
         responseData = {
             content: data.content,
             token: data.token,
+            title: data.title,
             selectionObj: documentList[ dataId ].selectionObj
         };
         socket.to( dataId ).emit( 'updateDoc', responseData )
