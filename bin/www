@@ -180,7 +180,7 @@ io.on( 'connection', function( socket ) {
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
             if( clientFindError ) return console.log( "Client Find Error:", clientFindError );
             if( clientArray.length === 0 ) {
-                delete documentList[ dataId ];
+                documentList[ dataId ] = null;
             }
         });
     });
