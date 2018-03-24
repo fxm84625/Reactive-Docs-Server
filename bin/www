@@ -104,6 +104,7 @@ function hash256( word ) {
   /**
     documentList: {
       docId: {
+        mainUser: String ( socket id ),
         title: String,
         content: editorState rawContent,
         selectionObj: {
@@ -121,6 +122,39 @@ var userColorArray = [
     "#99ff66",  // green
     "#ff9999",  // pink
 ];
+// Array to indicate which colors are taken
+var takenColorArray = [ false, false, false, false, false ];
+// Helper Function to choose the next untaken Color
+function nextColor() {
+    for( var i = 0; i < takenColorArray.length; i++ ) {
+        if( !takenColorArray[i] ) {
+            takenColorArray[i] = true;
+            return userColorArray[i];
+        }
+    }
+}
+// Helper Function to clear a color
+function clearColorSelection( color ) {
+    for( var i = 0; i < userColorArray.length; i++ ) {
+        if( color === userColorArray[i] ) {
+            takenColorArray[i] = false;
+            return;
+        }
+    }
+}
+
+// Interval variable and functions to handle Autosaving
+var autosaveInterval;
+function startAutoSave( io, socketId ) {
+    // Autosave every minute if there is a User in the Document's room
+    stopAutoSave();
+    autosaveInterval = setInterval( () => {
+        io.to( socketId ).emit( 'autosave' );
+    }, 1000*60 );
+}
+function stopAutoSave() {
+    if( autosaveInterval ) clearInterval( autosaveInterval );
+}
 
 /** Socket Io events **/
 io.on( 'connection', function( socket ) {
@@ -131,17 +165,26 @@ io.on( 'connection', function( socket ) {
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
             if( clientFindError ) return console.log( "Client Find Error:", clientFindError );
             if( clientArray.length >= 5 ) return callback( { error: "Document room is full." } );
-            var selectedColor = userColorArray[ clientArray.length ];
+            var selectedColor = nextColor();
             var responseData = {
                 token: data.userId,
                 color: selectedColor,
                 title: data.title
             };
+            // If there is someone already editing the Document,
+              // Give the new User the Document data
             if( documentList[ dataId ] ) {
                 responseData.content = documentList[ dataId ].content || {};
                 responseData.selectionObj = documentList[ dataId ].selectionObj || {};
             }
-            else { responseData.content = "fetch"; }
+            else {
+                // If the user is the first one to open the document,
+                  // Tell the user to fetch data from the Database
+                  // Start the Autosave for that Document
+                responseData.content = "fetch";
+                documentList[ dataId ].mainUser = socket.id;
+                startAutoSave( io, socket.id );
+            }
             // responseData: { token, content, title, color, selectionObj }
               // selectionObj is each User's current selectionStates
             callback( responseData );
@@ -172,18 +215,23 @@ io.on( 'connection', function( socket ) {
     socket.on( 'closeDoc', function( data ) {
         var dataId = hash256( data.docId );
         socket.leave( dataId );
+        clearColorSelection( data.userColor );
         if( documentList[ dataId ] && documentList[ dataId ].selectionObj && documentList[ dataId ].selectionObj[ data.userColor ] ) {
-          delete documentList[ dataId ].selectionObj[ data.userColor ];
+            delete documentList[ dataId ].selectionObj[ data.userColor ];
         }
         io.in( dataId ).clients( ( clientFindError, clientArray ) => {
             if( clientFindError ) return console.log( "Client Find Error:", clientFindError );
+            if( socket.id === documentList[ dataId ].mainUser ) {
+                startAutoSave( io, clientArray[0] );
+            }
             if( clientArray.length === 0 ) {
+                stopAutoSave();
                 documentList[ dataId ] = null;
             }
         });
     });
-    
-    // When a user Edits a Document's title, the server's saved Document title is updateDoc
+
+    // When a user Edits a Document's title, the server's saved Document title is updated, and every other user is told to update their title
       // data: { docId, title }
     socket.on( 'editTitle', function( data ) {
         var dataId = hash256( data.docId );

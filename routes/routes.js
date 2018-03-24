@@ -278,4 +278,30 @@ router.post( '/doc/:docId', ( req, res ) => {
     });
 });
 
+// Autosave for Document
+  // Similar to the Post request to /doc/:docId
+router.post( '/doc/autosave/:docId', ( req, res ) => {
+    if( !req.params.docId ) return handleError( res, "No document found (Invalid Document Id), cannot Save Document" );
+    if( !req.body.content ) return handleError( res, "No document content found, cannot Save Document" );
+    Document.findById( req.params.docId ).exec()
+    .catch( findDocumentError => handleError( res, "Find Document Error: " + findDocumentError ) )
+    .then( foundDocument => {
+        var documentSaveObj = {
+            editorState: req.body.content,
+            saveTime: Date.now(),
+            title: foundDocument.title
+        }
+        if( req.body.title ) {
+            documentSaveObj.title = req.body.title;
+            foundDocument.title = req.body.title;
+        }
+        foundDocument.autosave = documentSaveObj;
+        return foundDocument.save();
+    })
+    .catch( saveDocumentError => handleError( res, "Save Document Error: " + saveDocumentError ) )
+    .then( savedDocument => {
+        res.json({ success: true });
+    });
+});
+
 module.exports = router;
