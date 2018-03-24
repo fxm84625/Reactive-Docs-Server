@@ -146,11 +146,12 @@ function clearColorSelection( color ) {
 // Interval variable and functions to handle Autosaving
 var autosaveInterval;
 function startAutoSave( io, socketId ) {
-    // Autosave every minute if there is a User in the Document's room
+    // Autosave every interval while there is a User in the Document's room
+      // Default time interval: 30 seconds
     stopAutoSave();
     autosaveInterval = setInterval( () => {
         io.to( socketId ).emit( 'autosave' );
-    }, 1000*60 );
+    }, 1000*30 );
 }
 function stopAutoSave() {
     if( autosaveInterval ) clearInterval( autosaveInterval );
