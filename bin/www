@@ -182,7 +182,7 @@ io.on( 'connection', function( socket ) {
                   // Tell the user to fetch data from the Database
                   // Start the Autosave for that Document
                 responseData.content = "fetch";
-                documentList[ dataId ].mainUser = socket.id;
+                documentList[ dataId ] = { mainUser: socket.id };
                 startAutoSave( io, socket.id );
             }
             // responseData: { token, content, title, color, selectionObj }
