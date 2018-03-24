@@ -142,6 +142,9 @@ function clearColorSelection( color ) {
         }
     }
 }
+function clearAllColorSelections() {
+    takenColorArray = [ false, false, false, false, false ];
+}
 
 // Interval variable and functions to handle Autosaving
 var autosaveInterval;
@@ -227,6 +230,7 @@ io.on( 'connection', function( socket ) {
             }
             if( clientArray.length === 0 ) {
                 stopAutoSave();
+                clearAllColorSelections();
                 documentList[ dataId ] = null;
             }
         });
